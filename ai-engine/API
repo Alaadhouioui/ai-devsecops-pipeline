@@ -1,0 +1,22 @@
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+app = FastAPI()
+
+class InputData(BaseModel):
+    vulnerabilities: int
+
+@app.post(/risk)
+def calculate_risk(data: InputData):
+    # SIMPLE LOGIC (no AI yet)
+    if data.vulnerabilities >= 10:
+        score = 0.9
+    elif data.vulnerabilities >= 5:
+        score = 0.6
+    else:
+        score = 0.2
+
+    return {
+        risk_score: score,
+        status: HIGH if score > 0.7 else LOW
+    }
