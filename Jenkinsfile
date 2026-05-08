@@ -12,6 +12,7 @@ pipeline {
             steps {
                 git branch: 'main',
                 url: 'https://github.com/Alaadhouioui/ai-devsecops-pipeline.git'
+		credentialsId: 'github'
             }
         }
 
