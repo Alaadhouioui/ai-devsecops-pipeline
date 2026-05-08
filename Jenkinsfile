@@ -9,12 +9,12 @@ pipeline {
     stages {
 
         stage("Checkout Code") {
-            steps {
-                git branch: 'main',
-                url: 'https://github.com/Alaadhouioui/ai-devsecops-pipeline.git'
-		credentialsId: 'github'
-            }
-        }
+    steps {
+        git branch: 'main',
+            url: 'https://github.com/Alaadhouioui/ai-devsecops-pipeline.git',
+            credentialsId: 'github'
+    }
+}
 
         stage("SonarQube Analysis") {
             steps {
