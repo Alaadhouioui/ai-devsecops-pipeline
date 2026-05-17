@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: aerosec-postgres
+    environment:
+      POSTGRES_USER: aerosec
+      POSTGRES_PASSWORD: aerosec_password
+      POSTGRES_DB: aerosec_tower
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aerosec -d aerosec_tower"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: aerosec-backend
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgres://aerosec:aerosec_password@postgres:5432/aerosec_tower
+      JWT_SECRET: change_me_for_production_demo
+      CORS_ORIGIN: http://localhost:5173
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:5000/api
+        VITE_SOCKET_URL: http://localhost:5000
+    container_name: aerosec-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+

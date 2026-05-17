@@ -1,0 +1,2 @@
+-- Reference schema. Runtime initialization is handled by docker/init.sql.
+-- Tables: users, logs, alerts, system_status, audit_events, deployments.

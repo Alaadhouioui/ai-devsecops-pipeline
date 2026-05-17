@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(48, 213, 255, 0.16), transparent 32rem),
+    radial-gradient(circle at 80% 0%, rgba(255, 77, 109, 0.11), transparent 28rem),
+    linear-gradient(135deg, #050914 0%, #071323 48%, #030712 100%);
+  color: #e5f7ff;
+}
+
+.glass {
+  background: rgba(9, 22, 42, 0.68);
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(18px);
+}
+
+.radar {
+  position: relative;
+  overflow: hidden;
+}
+
+.radar::before {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border-radius: 999px;
+  border: 1px solid rgba(48, 213, 255, 0.26);
+  background:
+    repeating-radial-gradient(circle, transparent 0 22px, rgba(48, 213, 255, 0.08) 23px 24px),
+    conic-gradient(from 0deg, rgba(48, 213, 255, 0.38), transparent 55deg);
+  animation: sweep 4s linear infinite;
+}
+
+@keyframes sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(125, 211, 252, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.06) 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
