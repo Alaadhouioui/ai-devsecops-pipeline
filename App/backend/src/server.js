@@ -66,3 +66,4 @@ seedDemoData()
     console.error('Failed to seed demo data', error);
     process.exit(1);
   });
+

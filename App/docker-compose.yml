@@ -1,7 +1,11 @@
+version: "3.8"
+
 services:
+
   postgres:
     image: postgres:16-alpine
     container_name: aerosec-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: aerosec
       POSTGRES_PASSWORD: aerosec_password
@@ -16,22 +20,28 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - devsecops-net
 
   backend:
     build:
       context: ./backend
     container_name: aerosec-backend
+    restart: unless-stopped
     environment:
       NODE_ENV: production
       PORT: 5000
       DATABASE_URL: postgres://aerosec:aerosec_password@postgres:5432/aerosec_tower
       JWT_SECRET: change_me_for_production_demo
       CORS_ORIGIN: http://localhost:5173
+      AI_ENGINE_URL: http://ai-engine:8000
     ports:
       - "5000:5000"
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - devsecops-net
 
   frontend:
     build:
@@ -40,11 +50,27 @@ services:
         VITE_API_URL: http://localhost:5000/api
         VITE_SOCKET_URL: http://localhost:5000
     container_name: aerosec-frontend
+    restart: unless-stopped
     ports:
       - "5173:80"
     depends_on:
       - backend
+    networks:
+      - devsecops-net
+
+  ai-engine:
+    build:
+      context: ./ai-engine
+    container_name: ai-engine
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    networks:
+      - devsecops-net
 
 volumes:
   postgres_data:
 
+networks:
+  devsecops-net:
+    driver: bridge
