@@ -35,19 +35,25 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            steps {
-                sh '''
-                cd App
+       stage('SonarQube Analysis') {
+    steps {
+        script {
+            def scannerHome = tool 'sonar-scanner'
+            
+            withSonarQubeEnv('sonarqube') {
+                sh """
+                    cd App
 
-                sonar-scanner \
-                  -Dsonar.projectKey=aerosec-tower \
-                  -Dsonar.sources=backend/src,frontend/src \
-                  -Dsonar.host.url=$SONAR_HOST \
-                  -Dsonar.login=$SONAR_TOKEN
-                '''
+                    ${scannerHome}/bin/sonar-scanner \
+                    -Dsonar.projectKey=aerosec-tower \
+                    -Dsonar.sources=backend/src,frontend/src \
+                    -Dsonar.host.url=http://192.168.56.128:9000 \
+                    -Dsonar.login=${SONAR_TOKEN}
+                """
             }
         }
+    }
+}
 
         stage('Build Docker Images') {
             steps {
