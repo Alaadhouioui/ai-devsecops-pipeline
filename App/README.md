@@ -31,8 +31,10 @@ docker-compose up --build
 ```
 
 Frontend: http://localhost:5173  
-Backend API: http://localhost:5000/api  
-PostgreSQL: localhost:5432
+Backend API through frontend proxy: http://localhost:5173/api  
+Direct backend API: http://localhost:5000/api  
+PostgreSQL: localhost:5432  
+AI engine: http://localhost:8001
 
 ## Local Development
 

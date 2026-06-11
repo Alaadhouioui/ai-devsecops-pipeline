@@ -44,6 +44,15 @@ CREATE TABLE IF NOT EXISTS audit_events (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS ai_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_email VARCHAR(180),
+  risk_score INTEGER NOT NULL,
+  risk_level VARCHAR(30) NOT NULL,
+  action VARCHAR(80) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS deployments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   environment VARCHAR(80) NOT NULL,

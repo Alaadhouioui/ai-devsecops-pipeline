@@ -6,7 +6,7 @@ export function useSocket() {
   const [events, setEvents] = useState([]);
 
   useEffect(() => {
-    const socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000');
+    const socket = io(import.meta.env.VITE_SOCKET_URL || undefined);
 
     socket.on('tower:snapshot', setSnapshot);
     socket.on('tower:event', (event) => {
