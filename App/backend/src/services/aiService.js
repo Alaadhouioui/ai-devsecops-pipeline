@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const AI_ENGINE_URL = process.env.AI_ENGINE_URL || "http://192.168.56.128:8000";
+const AI_ENGINE_URL = process.env.AI_ENGINE_URL || "http://localhost:8001";
 
 export async function analyzeLog(message, type) {
   try {

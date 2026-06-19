@@ -4,6 +4,8 @@ pipeline {
     environment {
         SONAR_HOST = "http://192.168.56.128:9000"
         AI_ENGINE = "http://192.168.56.128:8001"
+        BACKEND_HEALTH_URL = "http://192.168.56.128:5000/health"
+        AI_HEALTH_URL = "http://192.168.56.128:8001"
         SONAR_TOKEN = credentials('sonar-token')
     }
 
@@ -35,6 +37,23 @@ pipeline {
             }
         }
 
+        stage('Run Backend Tests') {
+            steps {
+                sh '''
+                cd App/backend
+                npm test
+                '''
+            }
+        }
+
+        stage('Run AI Engine Tests') {
+            steps {
+                sh '''
+                python3 -m unittest discover -s App/ai-engine
+                '''
+            }
+        }
+
        stage('SonarQube Analysis') {
     steps {
         script {
@@ -47,7 +66,7 @@ pipeline {
                     ${scannerHome}/bin/sonar-scanner \
                     -Dsonar.projectKey=aerosec-tower \
                     -Dsonar.sources=backend/src,frontend/src \
-                    -Dsonar.host.url=http://192.168.56.128:9000 \
+                    -Dsonar.host.url=${SONAR_HOST} \
                     -Dsonar.login=${SONAR_TOKEN}
                 """
             }
@@ -70,9 +89,9 @@ pipeline {
         stage('Trivy Security Scan') {
             steps {
                 sh '''
-                trivy image aerosec-backend || true
-                trivy image aerosec-frontend || true
-                trivy image aerosec-ai-engine || true
+                trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-backend
+                trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-frontend
+                trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-ai-engine
                 '''
             }
         }
@@ -95,12 +114,17 @@ pipeline {
 
                     echo "AI RESPONSE: ${response}"
 
-                    if (
-                        response.contains('"risk_score":80') ||
-                        response.contains('"risk_score":90') ||
-                        response.contains('"risk_level":"CRITICAL"')
-                    ) {
-                        error("Pipeline blocked by AI Security Engine")
+                    def aiResult = new groovy.json.JsonSlurperClassic().parseText(response)
+                    def riskScore = aiResult.risk_score as Integer
+                    def riskLevel = aiResult.risk_level as String
+                    def recommendedAction = aiResult.recommended_action as String
+
+                    if (riskScore >= 90 || riskLevel == 'CRITICAL' || recommendedAction == 'block') {
+                        error("Pipeline blocked by AI Security Engine: ${riskLevel} risk (${riskScore})")
+                    }
+
+                    if (riskScore >= 70 || riskLevel == 'HIGH' || recommendedAction == 'manual-review') {
+                        unstable("AI Security Engine requires manual review: ${riskLevel} risk (${riskScore})")
                     }
                 }
             }
@@ -118,8 +142,8 @@ pipeline {
         stage('Deployment Verification') {
             steps {
                 sh '''
-                curl -f http://192.168.56.128:5000/health
-                curl -f http://192.168.56.128:8001
+                curl -f ${BACKEND_HEALTH_URL}
+                curl -f ${AI_HEALTH_URL}
                 '''
             }
         }
