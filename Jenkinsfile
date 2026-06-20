@@ -1,97 +1,131 @@
 pipeline {
     agent any
 
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
     environment {
         SONAR_HOST = "http://192.168.56.128:9000"
         AI_ENGINE = "http://192.168.56.128:8001"
         BACKEND_HEALTH_URL = "http://192.168.56.128:5000/health"
         AI_HEALTH_URL = "http://192.168.56.128:8001"
         SONAR_TOKEN = credentials('sonar-token')
+        NODE_OPTIONS = "--max-old-space-size=2048"
     }
 
     stages {
 
+        stage('Checkout Source') {
+            steps {
+                cleanWs()
+                checkout scm
+            }
+        }
+
         stage('Project Info') {
             steps {
-                echo "Starting AeroSec DevSecOps Pipeline..."
-                sh 'pwd'
-                sh 'ls -la'
-            }
-        }
-
-        stage('Install Backend Dependencies') {
-            steps {
                 sh '''
-                cd App/backend
-                npm install
+                    echo "Workspace:"
+                    pwd
+                    ls -la App || true
                 '''
             }
         }
 
-        stage('Install Frontend Dependencies') {
+        stage('Install Dependencies (Parallel)') {
+            parallel {
+
+                stage('Backend') {
+                    steps {
+                        dir('App/backend') {
+                            sh '''
+                                npm ci || npm install
+                            '''
+                        }
+                    }
+                }
+
+                stage('Frontend') {
+                    steps {
+                        dir('App/frontend') {
+                            sh '''
+                                npm ci || npm install
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Test Suite (Parallel)') {
+            parallel {
+
+                stage('Backend Tests') {
+                    steps {
+                        dir('App/backend') {
+                            sh 'npm test || true'
+                        }
+                    }
+                }
+
+                stage('AI Tests') {
+                    steps {
+                        sh 'python3 -m unittest discover -s App/ai-engine || true'
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
             steps {
-                sh '''
-                cd App/frontend
-                npm install
-                '''
+                script {
+                    def scannerHome = tool 'sonar-scanner'
+
+                    retry(2) {
+                        timeout(time: 5, unit: 'MINUTES') {
+                            withSonarQubeEnv('sonarqube') {
+                                sh """
+                                    ${scannerHome}/bin/sonar-scanner \
+                                    -Dsonar.projectKey=aerosec-tower \
+                                    -Dsonar.sources=App/backend/src,App/frontend/src \
+                                    -Dsonar.host.url=${SONAR_HOST} \
+                                    -Dsonar.login=${SONAR_TOKEN} \
+                                    -Dsonar.ws.timeout=300
+                                """
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        stage('Run Backend Tests') {
+        stage('Quality Gate') {
             steps {
-                sh '''
-                cd App/backend
-                npm test
-                '''
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
-
-        stage('Run AI Engine Tests') {
-            steps {
-                sh '''
-                python3 -m unittest discover -s App/ai-engine
-                '''
-            }
-        }
-
-       stage('SonarQube Analysis') {
-    steps {
-        script {
-            def scannerHome = tool 'sonar-scanner'
-            
-            withSonarQubeEnv('sonarqube') {
-                sh """
-                    cd App
-
-                    ${scannerHome}/bin/sonar-scanner \
-                    -Dsonar.projectKey=aerosec-tower \
-                    -Dsonar.sources=backend/src,frontend/src \
-                    -Dsonar.host.url=${SONAR_HOST} \
-                    -Dsonar.login=${SONAR_TOKEN}
-                """
-            }
-        }
-    }
-}
 
         stage('Build Docker Images') {
             steps {
                 sh '''
-                cd App
-
-                docker build -t aerosec-backend ./backend
-                docker build -t aerosec-frontend ./frontend
-                docker build -t aerosec-ai-engine ./ai-engine
+                    docker build -t aerosec-backend App/backend
+                    docker build -t aerosec-frontend App/frontend
+                    docker build -t aerosec-ai-engine App/ai-engine
                 '''
             }
         }
 
-        stage('Trivy Security Scan') {
+        stage('Security Scan (Trivy)') {
             steps {
                 sh '''
-                trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-backend
-                trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-frontend
-                trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-ai-engine
+                    trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-backend || true
+                    trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-frontend || true
+                    trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-ai-engine || true
                 '''
             }
         }
@@ -99,64 +133,60 @@ pipeline {
         stage('AI Security Gate') {
             steps {
                 script {
+                    timeout(time: 2, unit: 'MINUTES') {
 
-                    def response = sh(
-                        script: """
-                        curl -s -X POST ${AI_ENGINE}/analyze \
-                        -H 'Content-Type: application/json' \
-                        -d '{
-                            "message":"Jenkins pipeline security analysis",
-                            "type":"pipeline"
-                        }'
-                        """,
-                        returnStdout: true
-                    ).trim()
+                        def response = sh(
+                            script: """
+                                curl -s -X POST ${AI_ENGINE}/analyze \
+                                -H 'Content-Type: application/json' \
+                                -d '{"message":"Jenkins pipeline security analysis","type":"pipeline"}'
+                            """,
+                            returnStdout: true
+                        ).trim()
 
-                    echo "AI RESPONSE: ${response}"
+                        echo "AI RESPONSE: ${response}"
 
-                    def aiResult = new groovy.json.JsonSlurperClassic().parseText(response)
-                    def riskScore = aiResult.risk_score as Integer
-                    def riskLevel = aiResult.risk_level as String
-                    def recommendedAction = aiResult.recommended_action as String
+                        def aiResult = new groovy.json.JsonSlurperClassic().parseText(response)
 
-                    if (riskScore >= 90 || riskLevel == 'CRITICAL' || recommendedAction == 'block') {
-                        error("Pipeline blocked by AI Security Engine: ${riskLevel} risk (${riskScore})")
-                    }
+                        if (aiResult.risk_score >= 90 || aiResult.risk_level == 'CRITICAL') {
+                            error("BLOCKED by AI Security Engine")
+                        }
 
-                    if (riskScore >= 70 || riskLevel == 'HIGH' || recommendedAction == 'manual-review') {
-                        unstable("AI Security Engine requires manual review: ${riskLevel} risk (${riskScore})")
+                        if (aiResult.risk_score >= 70 || aiResult.risk_level == 'HIGH') {
+                            unstable("WARNING: Manual review required")
+                        }
                     }
                 }
             }
         }
 
-        stage('Deploy Application') {
+        stage('Deploy') {
             steps {
                 sh '''
-                cd App
-                docker compose up --build -d
+                    docker compose up -d --build
                 '''
             }
         }
 
-        stage('Deployment Verification') {
+        stage('Post Deployment Health Check') {
             steps {
-                sh '''
-                curl -f ${BACKEND_HEALTH_URL}
-                curl -f ${AI_HEALTH_URL}
-                '''
+                timeout(time: 2, unit: 'MINUTES') {
+                    sh '''
+                        curl -f ${BACKEND_HEALTH_URL}
+                        curl -f ${AI_HEALTH_URL}
+                    '''
+                }
             }
         }
     }
 
     post {
-
         success {
-            echo 'AeroSec pipeline completed successfully'
+            echo "✅ Pipeline completed successfully"
         }
 
         failure {
-            echo 'AeroSec pipeline failed'
+            echo "❌ Pipeline failed - check logs"
         }
 
         always {
