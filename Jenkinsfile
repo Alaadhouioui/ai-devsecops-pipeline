@@ -5,7 +5,7 @@ pipeline {
         timestamps()
         disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '20', artifactNumToKeepStr: '20'))
-        timeout(time: 60, unit: 'MINUTES')
+        timeout(time: 45, unit: 'MINUTES')
     }
 
     environment {
@@ -17,8 +17,6 @@ pipeline {
 
         IMAGE_TAG = "${BUILD_NUMBER}"
         NODE_OPTIONS = "--max-old-space-size=2048"
-
-        SONAR_TOKEN = credentials('sonar-token')
     }
 
     stages {
@@ -35,7 +33,7 @@ pipeline {
                 sh '''
                     echo "Workspace:"
                     pwd
-                    ls -la
+                    ls -la App || true
                 '''
             }
         }
@@ -87,13 +85,14 @@ pipeline {
 
                     withSonarQubeEnv('sonarqube') {
                         sh """
-                        ${scannerHome}/bin/sonar-scanner \
-                        -Dsonar.projectKey=aerosec-tower \
-                        -Dsonar.sources=App/backend/src,App/frontend/src \
-                        -Dsonar.host.url=${SONAR_HOST} \
-                        -Dsonar.token=${SONAR_TOKEN} \
-                        -Dsonar.javascript.node.maxspace=2048 \
-                        -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/**
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=aerosec-tower \
+                            -Dsonar.sources=App/backend/src,App/frontend/src \
+                            -Dsonar.host.url=${SONAR_HOST} \
+                            -Dsonar.javascript.node.maxspace=2048 \
+                            -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/** \
+                            -Dsonar.sourceEncoding=UTF-8 \
+                            -Dsonar.qualitygate.wait=true
                         """
                     }
                 }
@@ -102,7 +101,7 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                timeout(time: 10, unit: 'MINUTES') {
+                timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
@@ -111,9 +110,9 @@ pipeline {
         stage('Build Docker Images') {
             steps {
                 sh """
-                docker build -t aerosec-backend:${IMAGE_TAG} App/backend
-                docker build -t aerosec-frontend:${IMAGE_TAG} App/frontend
-                docker build -t aerosec-ai-engine:${IMAGE_TAG} App/ai-engine
+                    docker build -t aerosec-backend:${IMAGE_TAG} App/backend
+                    docker build -t aerosec-frontend:${IMAGE_TAG} App/frontend
+                    docker build -t aerosec-ai-engine:${IMAGE_TAG} App/ai-engine
                 """
             }
         }
@@ -121,9 +120,9 @@ pipeline {
         stage('Trivy Scan') {
             steps {
                 sh """
-                trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-backend:${IMAGE_TAG} || true
-                trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-frontend:${IMAGE_TAG} || true
-                trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-ai-engine:${IMAGE_TAG} || true
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL aerosec-backend:${IMAGE_TAG}
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL aerosec-frontend:${IMAGE_TAG}
+                    trivy image --exit-code 0 --severity HIGH,CRITICAL aerosec-ai-engine:${IMAGE_TAG}
                 """
             }
         }
@@ -134,24 +133,26 @@ pipeline {
 
                     def response = sh(
                         script: """
-                        curl -s -X POST ${AI_ENGINE}/analyze \
-                        -H 'Content-Type: application/json' \
-                        -d '{"message":"pipeline analysis","type":"devsecops"}'
+                            curl -s -X POST ${AI_ENGINE}/analyze \
+                            -H 'Content-Type: application/json' \
+                            -d '{"message":"pipeline security analysis","type":"devsecops"}'
                         """,
                         returnStdout: true
                     ).trim()
 
+                    echo "AI RESPONSE: ${response}"
+
                     writeFile file: 'ai-report.json', text: response
                     archiveArtifacts artifacts: 'ai-report.json'
 
-                    def json = new groovy.json.JsonSlurperClassic().parseText(response)
+                    def json = readJSON text: response
 
                     if (json.risk_score >= 90 || json.risk_level == 'CRITICAL') {
                         error("BLOCKED by AI Security Engine")
                     }
 
                     if (json.risk_score >= 70 || json.risk_level == 'HIGH') {
-                        unstable("AI requires manual review")
+                        unstable("AI Security Warning (manual review required)")
                     }
                 }
             }
@@ -160,8 +161,8 @@ pipeline {
         stage('Deploy') {
             steps {
                 sh """
-                docker compose down || true
-                docker compose up -d --build
+                    docker compose down || true
+                    docker compose up -d --build
                 """
             }
         }
@@ -170,8 +171,8 @@ pipeline {
             steps {
                 retry(3) {
                     sh """
-                    curl -f ${BACKEND_HEALTH_URL}
-                    curl -f ${AI_HEALTH_URL}
+                        curl -f ${BACKEND_HEALTH_URL}
+                        curl -f ${AI_HEALTH_URL}
                     """
                 }
             }
@@ -184,7 +185,7 @@ pipeline {
         }
 
         failure {
-            echo "FAILED: Check logs"
+            echo "FAILED: Pipeline failed"
         }
 
         always {
