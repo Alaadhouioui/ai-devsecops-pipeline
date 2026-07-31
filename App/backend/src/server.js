@@ -19,6 +19,7 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
+const trustProxy = process.env.TRUST_PROXY || 'loopback, linklocal, uniquelocal';
 
 const io = new Server(server, {
   cors: {
@@ -28,6 +29,7 @@ const io = new Server(server, {
 });
 
 app.use(helmet());
+app.set('trust proxy', trustProxy);
 app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json({ limit: '1mb' }));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 }));

@@ -44,7 +44,7 @@ pipeline {
                 stage('Backend') {
                     steps {
                         dir('App/backend') {
-                            sh 'npm ci || npm install'
+                            sh 'npm ci'
                         }
                     }
                 }
@@ -52,7 +52,7 @@ pipeline {
                 stage('Frontend') {
                     steps {
                         dir('App/frontend') {
-                            sh 'npm ci || npm install'
+                            sh 'npm ci'
                         }
                     }
                 }
@@ -65,14 +65,14 @@ pipeline {
                 stage('Backend Tests') {
                     steps {
                         dir('App/backend') {
-                            sh 'npm test || true'
+                            sh 'npm test'
                         }
                     }
                 }
 
                 stage('AI Tests') {
                     steps {
-                        sh 'python3 -m unittest discover -s App/ai-engine || true'
+                        sh 'python3 -m unittest discover -s App/ai-engine'
                     }
                 }
             }
@@ -120,9 +120,9 @@ pipeline {
         stage('Trivy Scan') {
             steps {
                 sh """
-                    trivy image --exit-code 0 --severity HIGH,CRITICAL aerosec-backend:${IMAGE_TAG}
-                    trivy image --exit-code 0 --severity HIGH,CRITICAL aerosec-frontend:${IMAGE_TAG}
-                    trivy image --exit-code 0 --severity HIGH,CRITICAL aerosec-ai-engine:${IMAGE_TAG}
+                    trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-backend:${IMAGE_TAG}
+                    trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-frontend:${IMAGE_TAG}
+                    trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-ai-engine:${IMAGE_TAG}
                 """
             }
         }

@@ -1,9 +1,9 @@
 import { query } from '../config/db.js';
-import { getSecurityHeatmap } from '../services/simulationService.js';
+import { getSecurityHeatmap, getSecurityPosture } from '../services/simulationService.js';
 
 export async function listAlerts(req, res) {
   const result = await query('SELECT * FROM alerts ORDER BY created_at DESC LIMIT 50');
-  return res.json({ alerts: result.rows, heatmap: getSecurityHeatmap() });
+  return res.json({ alerts: result.rows, heatmap: getSecurityHeatmap(), posture: getSecurityPosture(result.rows) });
 }
 
 export async function createAttackSimulation(req, res) {

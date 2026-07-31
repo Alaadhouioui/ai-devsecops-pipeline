@@ -120,3 +120,54 @@ function componentLabel(components) {
 function cryptoId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
+
+export function getSecurityPosture(alerts = []) {
+  const severityWeight = { low: 12, medium: 28, high: 55, critical: 85 };
+  const totalRisk = alerts.reduce((sum, alert) => sum + (severityWeight[alert.severity] || 20), 0);
+  const averageRisk = alerts.length ? Math.round(totalRisk / alerts.length) : 18;
+  const criticalCount = alerts.filter((alert) => alert.severity === 'critical').length;
+  const highCount = alerts.filter((alert) => alert.severity === 'high').length;
+  const postureScore = Math.min(100, averageRisk + criticalCount * 8 + highCount * 4);
+  const activeIncidents = alerts.filter((alert) => ['critical', 'high'].includes(alert.severity)).length;
+
+  return {
+    postureScore,
+    riskLevel: postureScore >= 80 ? 'critical' : postureScore >= 60 ? 'high' : postureScore >= 35 ? 'medium' : 'low',
+    activeIncidents,
+    blockedRequests: 180 + alerts.length * 7 + highCount * 14 + criticalCount * 25,
+    failedLogins: 6 + alerts.filter((alert) => /login|auth|brute/i.test(alert.title || '')).length * 4,
+    meanTimeToContain: criticalCount ? '18 min' : highCount ? '11 min' : '7 min',
+    mitreTactics: [
+      tactic('Initial Access', 'T1190', 'Public API probing and unauthorized requests', activeIncidents ? 'high' : 'medium'),
+      tactic('Credential Access', 'T1110', 'Failed login bursts and brute-force patterns', criticalCount ? 'critical' : 'medium'),
+      tactic('Discovery', 'T1046', 'Port scanning and service enumeration signals', highCount ? 'high' : 'low'),
+      tactic('Impact', 'T1499', 'Availability risk against monitoring services', postureScore >= 70 ? 'high' : 'medium')
+    ],
+    controls: [
+      control('JWT authentication', 'implemented', 'Protected API routes require bearer tokens'),
+      control('Role-based access', 'implemented', 'Simulation actions restricted to Admin and Engineer'),
+      control('Rate limiting', 'implemented', 'Express limiter with trusted proxy configuration'),
+      control('Container vulnerability gate', 'implemented', 'Trivy fails CI on HIGH and CRITICAL findings'),
+      control('Static analysis gate', 'implemented', 'SonarQube quality gate blocks unsafe promotion'),
+      control('Automated DAST', 'planned', 'OWASP ZAP is modeled in the pipeline and ready for active scan integration')
+    ],
+    playbook: [
+      stepItem('Triage', 'Correlate alert severity, affected endpoint, and recent audit logs'),
+      stepItem('Contain', 'Block malicious IP ranges and disable suspicious sessions'),
+      stepItem('Eradicate', 'Patch vulnerable route, rotate exposed secrets, and redeploy'),
+      stepItem('Recover', 'Run health checks, verify telemetry, and document lessons learned')
+    ]
+  };
+}
+
+function tactic(name, technique, description, severity) {
+  return { name, technique, description, severity };
+}
+
+function control(name, status, evidence) {
+  return { name, status, evidence };
+}
+
+function stepItem(name, action) {
+  return { name, action };
+}
