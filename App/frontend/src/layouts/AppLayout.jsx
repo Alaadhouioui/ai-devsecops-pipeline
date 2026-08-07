@@ -1,6 +1,6 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Bell, Database, Gauge, GitBranch, LogOut, RadioTower, Shield, Wind } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useNavigation } from '../context/NavigationContext.jsx';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: Gauge },
@@ -10,8 +10,8 @@ const links = [
   { to: '/devsecops', label: 'DevSecOps', icon: GitBranch }
 ];
 
-export default function AppLayout() {
-  const navigate = useNavigate();
+export default function AppLayout({ page }) {
+  const { path, navigate } = useNavigation();
   const { user, logoutSession } = useAuth();
 
   function logout() {
@@ -34,18 +34,18 @@ export default function AppLayout() {
 
         <nav className="mt-8 flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
           {links.map(({ to, label, icon: Icon }) => (
-            <NavLink
+            <button
               key={to}
-              to={to}
-              className={({ isActive }) =>
-                `flex min-w-max items-center gap-3 rounded-lg px-3 py-3 text-sm transition ${
-                  isActive ? 'bg-cyan-300/15 text-cyan-100 shadow-glow' : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                }`
+              type="button"
+              onClick={() => navigate(to)}
+              className={
+                'flex min-w-max items-center gap-3 rounded-lg px-3 py-3 text-left text-sm transition ' +
+                (path === to ? 'bg-cyan-300/15 text-cyan-100 shadow-glow' : 'text-slate-400 hover:bg-white/5 hover:text-white')
               }
             >
               <Icon className="h-4 w-4" />
               {label}
-            </NavLink>
+            </button>
           ))}
         </nav>
 
@@ -63,9 +63,7 @@ export default function AppLayout() {
       </aside>
 
       <main className="grid-bg p-4 md:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl">
-          <Outlet />
-        </div>
+        <div className="mx-auto max-w-7xl">{page}</div>
       </main>
     </div>
   );

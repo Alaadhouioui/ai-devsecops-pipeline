@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { useEffect } from 'react';
 import AppLayout from './layouts/AppLayout.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import DevSecOps from './pages/DevSecOps.jsx';
@@ -7,29 +7,44 @@ import Logs from './pages/Logs.jsx';
 import Modules from './pages/Modules.jsx';
 import Security from './pages/Security.jsx';
 import { useAuth } from './context/AuthContext.jsx';
+import { useNavigation } from './context/NavigationContext.jsx';
 
-function Protected({ children }) {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
-}
+const pages = {
+  '/': Dashboard,
+  '/modules': Modules,
+  '/security': Security,
+  '/logs': Logs,
+  '/devsecops': DevSecOps
+};
 
 export default function App() {
+  const { isAuthenticated } = useAuth();
+  const { path } = useNavigation();
+
+  if (path === '/login') {
+    return isAuthenticated ? <Redirect to="/" /> : <Login />;
+  }
+
+  if (!isAuthenticated) {
+    return <Redirect to="/login" />;
+  }
+
+  const Page = pages[path] || Dashboard;
+
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route
-        element={
-          <Protected>
-            <AppLayout />
-          </Protected>
-        }
-      >
-        <Route index element={<Dashboard />} />
-        <Route path="/modules" element={<Modules />} />
-        <Route path="/security" element={<Security />} />
-        <Route path="/logs" element={<Logs />} />
-        <Route path="/devsecops" element={<DevSecOps />} />
-      </Route>
-    </Routes>
+    <>
+      {!pages[path] && <Redirect to="/" />}
+      <AppLayout page={<Page />} />
+    </>
   );
+}
+
+function Redirect({ to }) {
+  const { navigate } = useNavigation();
+
+  useEffect(() => {
+    navigate(to, { replace: true });
+  }, [navigate, to]);
+
+  return null;
 }

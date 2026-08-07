@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Lock, RadioTower } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useNavigation } from '../context/NavigationContext.jsx';
 import { api } from '../services/api.js';
 
 const accounts = [
@@ -12,7 +12,7 @@ const accounts = [
 ];
 
 export default function Login() {
-  const navigate = useNavigate();
+  const { navigate } = useNavigation();
   const { loginSession } = useAuth();
   const [form, setForm] = useState({ email: accounts[1][1], password: accounts[1][2] });
   const [error, setError] = useState('');
