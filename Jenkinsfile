@@ -119,11 +119,46 @@ pipeline {
 
         stage('Trivy Scan') {
             steps {
-                sh """
-                    trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-backend:${IMAGE_TAG}
-                    trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-frontend:${IMAGE_TAG}
-                    trivy image --exit-code 1 --severity HIGH,CRITICAL aerosec-ai-engine:${IMAGE_TAG}
-                """
+                script {
+                    echo "🔍 Running Trivy Security Scan on all containers..."
+                    sh """
+                        # Backend Scan
+                        docker run --rm \
+                          -v /var/run/docker.sock:/var/run/docker.sock \
+                          -v /var/cache/trivy:/root/.cache/ \
+                          aquasec/trivy:latest image \
+                          --skip-db-update \
+                          --scanners vuln \
+                          --no-progress \
+                          --exit-code 1 \
+                          --severity HIGH,CRITICAL \
+                          aerosec-backend:${IMAGE_TAG}
+
+                        # Frontend Scan
+                        docker run --rm \
+                          -v /var/run/docker.sock:/var/run/docker.sock \
+                          -v /var/cache/trivy:/root/.cache/ \
+                          aquasec/trivy:latest image \
+                          --skip-db-update \
+                          --scanners vuln \
+                          --no-progress \
+                          --exit-code 1 \
+                          --severity HIGH,CRITICAL \
+                          aerosec-frontend:${IMAGE_TAG}
+
+                        # AI Engine Scan
+                        docker run --rm \
+                          -v /var/run/docker.sock:/var/run/docker.sock \
+                          -v /var/cache/trivy:/root/.cache/ \
+                          aquasec/trivy:latest image \
+                          --skip-db-update \
+                          --scanners vuln \
+                          --no-progress \
+                          --exit-code 1 \
+                          --severity HIGH,CRITICAL \
+                          aerosec-ai-engine:${IMAGE_TAG}
+                    """
+                }
             }
         }
 
