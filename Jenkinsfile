@@ -9,11 +9,11 @@ pipeline {
     }
 
     environment {
-        SONAR_HOST = "http://192.168.56.128:9000"
-        AI_ENGINE = "http://192.168.56.128:8001"
+        SONAR_HOST = "http://localhost:9000"
+        AI_ENGINE = "http://localhost:8001"
 
-        BACKEND_HEALTH_URL = "http://192.168.56.128:5000/health"
-        AI_HEALTH_URL = "http://192.168.56.128:8001"
+        BACKEND_HEALTH_URL = "http://localhost:5000/health"
+        AI_HEALTH_URL = "http://localhost:8001"
 
         IMAGE_TAG = "${BUILD_NUMBER}"
         NODE_OPTIONS = "--max-old-space-size=2048"
