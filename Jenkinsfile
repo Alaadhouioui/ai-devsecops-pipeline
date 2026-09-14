@@ -86,7 +86,7 @@ pipeline {
                     withSonarQubeEnv('sonarqube') {
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
-                            -Dsonar.projectKey=jenkins-aerosec \
+                            -Dsonar.projectKey=aerosec-tower \
                             -Dsonar.sources=App/backend/src,App/frontend/src \
                             -Dsonar.host.url=${SONAR_HOST} \
                             -Dsonar.javascript.node.maxspace=2048 \
