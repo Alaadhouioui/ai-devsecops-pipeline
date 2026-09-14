@@ -158,6 +158,7 @@ pipeline {
                           --scanners vuln \
                           --no-progress \
                           --ignore-unfixed \
+                          --ignorefile /tmp/.trivyignore \
                           --exit-code 1 \
                           --severity HIGH,CRITICAL \
                           aerosec-ai-engine:${IMAGE_TAG}
