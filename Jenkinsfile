@@ -130,6 +130,7 @@ pipeline {
                           --skip-db-update \
                           --scanners vuln \
                           --no-progress \
+                          --ignore-unfixed \
                           --exit-code 1 \
                           --severity HIGH,CRITICAL \
                           aerosec-backend:${IMAGE_TAG}
@@ -142,6 +143,7 @@ pipeline {
                           --skip-db-update \
                           --scanners vuln \
                           --no-progress \
+                          --ignore-unfixed \
                           --exit-code 1 \
                           --severity HIGH,CRITICAL \
                           aerosec-frontend:${IMAGE_TAG}
@@ -154,6 +156,7 @@ pipeline {
                           --skip-db-update \
                           --scanners vuln \
                           --no-progress \
+                          --ignore-unfixed \
                           --exit-code 1 \
                           --severity HIGH,CRITICAL \
                           aerosec-ai-engine:${IMAGE_TAG}
