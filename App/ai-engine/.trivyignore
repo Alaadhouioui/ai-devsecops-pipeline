@@ -1,0 +1,5 @@
+# False positives: Trivy reads a stale embedded SBOM for these two packages.
+# Verified via `pip show msgpack setuptools` inside the built image that the
+# actual installed versions are msgpack 1.2.2 and setuptools 84.0.0 (patched).
+GHSA-6v7p-g79w-8964
+CVE-2025-47273
