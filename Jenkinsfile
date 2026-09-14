@@ -152,6 +152,7 @@ pipeline {
                         docker run --rm \
                           -v /var/run/docker.sock:/var/run/docker.sock \
                           -v /var/cache/trivy:/root/.cache/trivy \
+                          -v ${WORKSPACE}/App/ai-engine/.trivyignore:/tmp/.trivyignore \
                           aquasec/trivy:latest image \
                           --skip-db-update \
                           --scanners vuln \
