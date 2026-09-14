@@ -125,7 +125,7 @@ pipeline {
                         # Backend Scan
                         docker run --rm \
                           -v /var/run/docker.sock:/var/run/docker.sock \
-                          -v /var/cache/trivy:/root/.cache/trivy
+                          -v /var/cache/trivy:/root/.cache/trivy \
                           aquasec/trivy:latest image \
                           --skip-db-update \
                           --scanners vuln \
@@ -137,7 +137,7 @@ pipeline {
                         # Frontend Scan
                         docker run --rm \
                           -v /var/run/docker.sock:/var/run/docker.sock \
-                          -v /var/cache/trivy:/root/.cache/trivy
+                          -v /var/cache/trivy:/root/.cache/trivy \
                           aquasec/trivy:latest image \
                           --skip-db-update \
                           --scanners vuln \
@@ -149,7 +149,7 @@ pipeline {
                         # AI Engine Scan
                         docker run --rm \
                           -v /var/run/docker.sock:/var/run/docker.sock \
-                          -v /var/cache/trivy:/root/.cache/trivy
+                          -v /var/cache/trivy:/root/.cache/trivy \
                           aquasec/trivy:latest image \
                           --skip-db-update \
                           --scanners vuln \
