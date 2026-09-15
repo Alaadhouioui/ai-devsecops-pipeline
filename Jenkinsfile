@@ -211,12 +211,6 @@ stage('OWASP ZAP Baseline Scan') {
     }
 }
 
-stage('Tear Down Test Stack') {
-    steps {
-        dir('App') {
-            sh 'docker compose down || true'
-        }
-    }
 }
                 
         stage('AI Security Gate') {
@@ -249,6 +243,12 @@ stage('Tear Down Test Stack') {
                 }
             }
         }
+	stage('Tear Down Test Stack') {
+    steps {
+        dir('App') {
+            sh 'docker compose down || true'
+        }
+    }
 
 	stage('Push to DockerHub') {
     steps {
