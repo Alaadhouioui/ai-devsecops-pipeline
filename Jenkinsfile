@@ -317,6 +317,31 @@ stage('OWASP ZAP Baseline Scan') {
         }
     }
 
+	stage('Deploy to k3s') {
+    steps {
+        withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+            sh """
+                export KUBECONFIG=\$KUBECONFIG_FILE
+
+                # Substitute the real image tag into each manifest
+                sed 's/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g' k8s/backend.yaml > /tmp/backend.yaml
+                sed 's/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g' k8s/frontend.yaml > /tmp/frontend.yaml
+                sed 's/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g' k8s/ai-engine.yaml > /tmp/ai-engine.yaml
+
+                kubectl apply -f k8s/postgres.yaml
+                kubectl apply -f /tmp/backend.yaml
+                kubectl apply -f /tmp/frontend.yaml
+                kubectl apply -f /tmp/ai-engine.yaml
+
+                kubectl rollout status deployment/aerosec-postgres --timeout=90s
+                kubectl rollout status deployment/aerosec-backend --timeout=90s
+                kubectl rollout status deployment/aerosec-frontend --timeout=90s
+                kubectl rollout status deployment/aerosec-ai-engine --timeout=90s
+            """
+        }
+    }
+}	
+
     post {
         success {
             echo "SUCCESS: Pipeline completed"
