@@ -14,6 +14,8 @@ spec:
       labels:
         app: aerosec-ai-engine
     spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
       containers:
         - name: aerosec-ai-engine
           image: dhouiouialaaa/aerosec-tower:ai-engine-IMAGE_TAG_PLACEHOLDER

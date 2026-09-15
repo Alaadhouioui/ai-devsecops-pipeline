@@ -14,6 +14,8 @@ spec:
       labels:
         app: aerosec-frontend
     spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
       containers:
         - name: aerosec-frontend
           image: dhouiouialaaa/aerosec-tower:frontend-IMAGE_TAG_PLACEHOLDER

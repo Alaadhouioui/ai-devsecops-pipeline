@@ -25,6 +25,8 @@ spec:
       labels:
         app: aerosec-postgres
     spec:
+      imagePullSecrets:
+        - name: dockerhub-secret
       containers:
         - name: postgres
           image: postgres:16-alpine
