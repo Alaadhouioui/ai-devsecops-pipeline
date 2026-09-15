@@ -185,17 +185,29 @@ pipeline {
 
 stage('OWASP ZAP Baseline Scan') {
     steps {
-	sh 'chmod -R 777 ${WORKSPACE}'
-	sh """
-            docker run --rm \
-              -v ${WORKSPACE}:/zap/wrk/:rw \
-              --network host \
-              zaproxy/zap-stable zap-baseline.py \
-              -t http://localhost:5173 \
-              -r zap-report.html \
-              -J zap-report.json 
-        """
-        archiveArtifacts artifacts: 'zap-report.html, zap-report.json', allowEmptyArchive: true
+        sh 'chmod -R 777 ${WORKSPACE}'
+        script {
+            def zapExitCode = sh(
+                script: """
+                    docker run --rm \
+                      -v ${WORKSPACE}:/zap/wrk/:rw \
+                      --network host \
+                      zaproxy/zap-stable zap-baseline.py \
+                      -t http://localhost:5173 \
+                      -r zap-report.html \
+                      -J zap-report.json
+                """,
+                returnStatus: true
+            )
+
+            archiveArtifacts artifacts: 'zap-report.html, zap-report.json', allowEmptyArchive: true
+
+            if (zapExitCode == 1) {
+                error("ZAP found FAIL-level vulnerabilities — blocking pipeline")
+            } else if (zapExitCode == 2) {
+                unstable("ZAP found WARN-level issues — review recommended, not blocking")
+            }
+        }
     }
 }
 
