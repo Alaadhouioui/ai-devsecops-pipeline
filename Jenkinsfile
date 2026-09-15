@@ -185,7 +185,8 @@ pipeline {
 
 stage('OWASP ZAP Baseline Scan') {
     steps {
-        sh """
+	sh 'chmod -R 777 ${WORKSPACE}'
+	sh """
             docker run --rm \
               -v ${WORKSPACE}:/zap/wrk/:rw \
               --network host \
