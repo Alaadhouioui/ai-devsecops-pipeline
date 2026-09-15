@@ -166,7 +166,7 @@ pipeline {
                 }
             }
         }
-grep -n "stage('" Jenkinsfile
+
         stage('Spin Up Test Stack') {
     steps {
         dir('App') {
@@ -236,7 +236,7 @@ stage('Tear Down Test Stack') {
                 }
             }
         }
-grep -n "stage('" Jenkinsfile
+
 	stage('Push to DockerHub') {
     steps {
         withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
