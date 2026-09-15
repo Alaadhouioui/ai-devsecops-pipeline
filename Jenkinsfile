@@ -166,7 +166,45 @@ pipeline {
                 }
             }
         }
-        
+grep -n "stage('" Jenkinsfile
+        stage('Spin Up Test Stack') {
+    steps {
+        dir('App') {
+            sh 'IMAGE_TAG=${IMAGE_TAG} docker compose up -d --build'
+        }
+        // give the app a few seconds to be ready
+        sh '''
+            for i in $(seq 1 12); do
+                curl -sf http://localhost:5173 > /dev/null && break
+                echo "Waiting for frontend..."
+                sleep 5
+            done
+        '''
+    }
+}
+
+stage('OWASP ZAP Baseline Scan') {
+    steps {
+        sh """
+            docker run --rm \
+              -v ${WORKSPACE}:/zap/wrk/:rw \
+              --network host \
+              zaproxy/zap-stable zap-baseline.py \
+              -t http://localhost:5173 \
+              -r zap-report.html \
+              -J zap-report.json 
+        """
+        archiveArtifacts artifacts: 'zap-report.html, zap-report.json', allowEmptyArchive: true
+    }
+}
+
+stage('Tear Down Test Stack') {
+    steps {
+        dir('App') {
+            sh 'docker compose down || true'
+        }
+    }
+}
                 
         stage('AI Security Gate') {
             steps {
@@ -198,7 +236,7 @@ pipeline {
                 }
             }
         }
-	
+grep -n "stage('" Jenkinsfile
 	stage('Push to DockerHub') {
     steps {
         withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
@@ -247,8 +285,8 @@ pipeline {
             steps {
 		dir('App') {
                     sh """
-                       docker compose down || true
-                       docker compose up -d --build
+                       IMAGE_TAG=${IMAGE_TAG} docker compose down || true
+                       IMAGE_TAG=${IMAGE_TAG} docker compose up -d 
                     """
 		}
             }
