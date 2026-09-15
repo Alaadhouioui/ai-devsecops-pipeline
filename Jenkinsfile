@@ -200,21 +200,21 @@ pipeline {
         }
 	
 	stage('Push to DockerHub') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh """
-                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
-                        docker tag aerosec-backend:${IMAGE_TAG} \$DOCKER_USER/aerosec-backend:${IMAGE_TAG}
-                        docker tag aerosec-frontend:${IMAGE_TAG} \$DOCKER_USER/aerosec-frontend:${IMAGE_TAG}
-                        docker tag aerosec-ai-engine:${IMAGE_TAG} \$DOCKER_USER/aerosec-ai-engine:${IMAGE_TAG}
-                        docker push \$DOCKER_USER/aerosec-backend:${IMAGE_TAG}
-                        docker push \$DOCKER_USER/aerosec-frontend:${IMAGE_TAG}
-                        docker push \$DOCKER_USER/aerosec-ai-engine:${IMAGE_TAG}
-                        docker logout
-                    """
-                }
-            }
+    steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+            sh """
+                echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                docker tag aerosec-backend:${IMAGE_TAG} dhouiouialaaa/aerosec-tower:backend-${IMAGE_TAG}
+                docker tag aerosec-frontend:${IMAGE_TAG} dhouiouialaaa/aerosec-tower:frontend-${IMAGE_TAG}
+                docker tag aerosec-ai-engine:${IMAGE_TAG} dhouiouialaaa/aerosec-tower:ai-engine-${IMAGE_TAG}
+                docker push dhouiouialaaa/aerosec-tower:backend-${IMAGE_TAG}
+                docker push dhouiouialaaa/aerosec-tower:frontend-${IMAGE_TAG}
+                docker push dhouiouialaaa/aerosec-tower:ai-engine-${IMAGE_TAG}
+                docker logout
+            """
         }
+    }
+}
         stage('Push to Nexus Docker Registry') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-creds', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
