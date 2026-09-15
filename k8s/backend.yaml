@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aerosec-backend
+  labels:
+    app: aerosec-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aerosec-backend
+  template:
+    metadata:
+      labels:
+        app: aerosec-backend
+    spec:
+      containers:
+        - name: aerosec-backend
+          image: dhouiouialaaa/aerosec-tower:backend-IMAGE_TAG_PLACEHOLDER
+          ports:
+            - containerPort: 5000
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "5000"
+            - name: DATABASE_URL
+              value: "postgres://aerosec:aerosec_password@aerosec-postgres:5432/aerosec_tower"
+            - name: JWT_SECRET
+              value: "change_me_for_production_demo"
+            - name: CORS_ORIGIN
+              value: "*"
+            - name: AI_ENGINE_URL
+              value: "http://aerosec-ai-engine:8000"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aerosec-backend
+spec:
+  selector:
+    app: aerosec-backend
+  ports:
+    - port: 5000
+      targetPort: 5000
+  type: ClusterIP

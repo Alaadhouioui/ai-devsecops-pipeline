@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aerosec-frontend
+  labels:
+    app: aerosec-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aerosec-frontend
+  template:
+    metadata:
+      labels:
+        app: aerosec-frontend
+    spec:
+      containers:
+        - name: aerosec-frontend
+          image: dhouiouialaaa/aerosec-tower:frontend-IMAGE_TAG_PLACEHOLDER
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aerosec-frontend
+spec:
+  selector:
+    app: aerosec-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: NodePort

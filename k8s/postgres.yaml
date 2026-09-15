@@ -1,0 +1,58 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aerosec-postgres
+  labels:
+    app: aerosec-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aerosec-postgres
+  template:
+    metadata:
+      labels:
+        app: aerosec-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: "aerosec"
+            - name: POSTGRES_PASSWORD
+              value: "aerosec_password"
+            - name: POSTGRES_DB
+              value: "aerosec_tower"
+          volumeMounts:
+            - name: postgres-storage
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-storage
+          persistentVolumeClaim:
+            claimName: postgres-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: aerosec-postgres
+spec:
+  selector:
+    app: aerosec-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP
