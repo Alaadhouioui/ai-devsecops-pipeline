@@ -166,7 +166,8 @@ pipeline {
                 }
             }
         }
-
+        
+                
         stage('AI Security Gate') {
             steps {
                 script {
@@ -197,13 +198,59 @@ pipeline {
                 }
             }
         }
+	
+	stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                        docker tag aerosec-backend:${IMAGE_TAG} \$DOCKER_USER/aerosec-backend:${IMAGE_TAG}
+                        docker tag aerosec-frontend:${IMAGE_TAG} \$DOCKER_USER/aerosec-frontend:${IMAGE_TAG}
+                        docker tag aerosec-ai-engine:${IMAGE_TAG} \$DOCKER_USER/aerosec-ai-engine:${IMAGE_TAG}
+                        docker push \$DOCKER_USER/aerosec-backend:${IMAGE_TAG}
+                        docker push \$DOCKER_USER/aerosec-frontend:${IMAGE_TAG}
+                        docker push \$DOCKER_USER/aerosec-ai-engine:${IMAGE_TAG}
+                        docker logout
+                    """
+                }
+            }
+        }
+        stage('Push to Nexus Docker Registry') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'nexus-creds', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                    sh """
+                        echo "\$NEXUS_PASS" | docker login localhost:8082 -u "\$NEXUS_USER" --password-stdin
+                        docker tag aerosec-backend:${IMAGE_TAG} localhost:8082/aerosec-backend:${IMAGE_TAG}
+                        docker tag aerosec-ai-engine:${IMAGE_TAG} localhost:8082/aerosec-ai-engine:${IMAGE_TAG}
+                        docker tag aerosec-frontend:${IMAGE_TAG} localhost:8082/aerosec-frontend:${IMAGE_TAG}
+                        docker push localhost:8082/aerosec-backend:${IMAGE_TAG}
+                        docker push localhost:8082/aerosec-ai-engine:${IMAGE_TAG}
+                        docker push localhost:8082/aerosec-frontend:${IMAGE_TAG}
+			docker logout localhost:8082
+                    """
+                }
+            }
+        }
+	
 
+        stage('Upload Reports to Nexus') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'nexus-creds', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                    sh """
+                        curl -u \$NEXUS_USER:\$NEXUS_PASS --upload-file ai-report.json \
+                          http://localhost:8081/repository/reports/ai-report-${BUILD_NUMBER}.json
+                    """
+                }
+            }
+        }
         stage('Deploy') {
             steps {
-                sh """
-                    docker compose down || true
-                    docker compose up -d --build
-                """
+		dir('App') {
+                    sh """
+                       docker compose down || true
+                       docker compose up -d --build
+                    """
+		}
             }
         }
 
