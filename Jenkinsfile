@@ -315,7 +315,7 @@ stage('OWASP ZAP Baseline Scan') {
                 }
             }
         }
-    }
+    
 
 	stage('Deploy to k3s') {
     steps {
@@ -338,10 +338,10 @@ stage('OWASP ZAP Baseline Scan') {
                 kubectl rollout status deployment/aerosec-frontend --timeout=90s
                 kubectl rollout status deployment/aerosec-ai-engine --timeout=90s
             """
-        }
-    }
-}	
-
+       		 }
+   	 }
+	}	
+}
     post {
         success {
             echo "SUCCESS: Pipeline completed"
