@@ -330,12 +330,30 @@ stage('OWASP ZAP Baseline Scan') {
 
         stage('Health Check') {
             steps {
-                retry(3) {
-                    sh """
-                        curl -f ${BACKEND_HEALTH_URL}
-                        curl -f ${AI_HEALTH_URL}
-                    """
-                }
+                sh """
+                    set -eu
+
+                    wait_for_service() {
+                        name=\$1
+                        url=\$2
+                        attempts=30
+
+                        for attempt in \$(seq 1 \$attempts); do
+                            if curl --silent --show-error --fail \"\$url\"; then
+                                echo \"\$name is healthy\"
+                                return 0
+                            fi
+                            echo \"Waiting for \$name (\$attempt/\$attempts)...\"
+                            sleep 5
+                        done
+
+                        echo \"\$name did not become healthy at \$url\" >&2
+                        return 1
+                    }
+
+                    wait_for_service backend '${BACKEND_HEALTH_URL}'
+                    wait_for_service AI-engine '${AI_HEALTH_URL}'
+                """
             }
         }
     
