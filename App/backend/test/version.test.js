@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createServer } from 'node:http';
-import app from '../src/app.js';
+import express from 'express';
+import app, { errorHandler } from '../src/app.js';
 
 test('version endpoint returns build metadata through the mounted API route', async (t) => {
   process.env.BUILD_NUMBER = '42';
@@ -27,13 +28,19 @@ test('version endpoint returns build metadata through the mounted API route', as
   });
   assert.ok(Number.isFinite(Date.parse(body.builtAt)));
 
-  app.get('/test-error', () => {
+  const errorApp = express();
+  errorApp.get('/test-error', () => {
     throw new Error('expected test error');
   });
+  errorApp.use(errorHandler);
+  const errorServer = createServer(errorApp);
+  await new Promise((resolve) => errorServer.listen(0, '127.0.0.1', resolve));
+  t.after(() => errorServer.close());
+
   const originalConsoleError = console.error;
   console.error = () => {};
   try {
-    const errorResponse = await fetch(`http://127.0.0.1:${server.address().port}/test-error`);
+    const errorResponse = await fetch(`http://127.0.0.1:${errorServer.address().port}/test-error`);
     assert.equal(errorResponse.status, 500);
     assert.deepEqual(await errorResponse.json(), { message: 'Internal server error' });
   } finally {

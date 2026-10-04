@@ -29,9 +29,11 @@ app.use('/api/logs', logRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/devsecops', devsecopsRoutes);
 
-app.use((err, req, res, next) => {
+export const errorHandler = (err, req, res, next) => {
   console.error(err);
   res.status(500).json({ message: 'Internal server error' });
-});
+};
+
+app.use(errorHandler);
 
 export default app;
