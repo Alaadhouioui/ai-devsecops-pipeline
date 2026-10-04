@@ -109,11 +109,18 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
+                script {
+                    def buildTimestamp = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone('UTC'))
                 sh """
-                    docker build -t aerosec-backend:${IMAGE_TAG} App/backend
+                    docker build \
+                      --build-arg BUILD_NUMBER=${env.BUILD_NUMBER} \
+                      --build-arg GIT_COMMIT=${env.GIT_COMMIT} \
+                      --build-arg BUILD_TIMESTAMP=${buildTimestamp} \
+                      -t aerosec-backend:${IMAGE_TAG} App/backend
                     docker build -t aerosec-frontend:${IMAGE_TAG} App/frontend
                     docker build -t aerosec-ai-engine:${IMAGE_TAG} App/ai-engine
                 """
+                }
             }
         }
 

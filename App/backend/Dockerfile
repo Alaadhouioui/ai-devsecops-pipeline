@@ -9,6 +9,13 @@ COPY src ./src
 # ---- Runtime stage ----
 FROM node:20-alpine AS runtime
 
+ARG BUILD_NUMBER=local
+ARG GIT_COMMIT=unknown
+ARG BUILD_TIMESTAMP
+ENV BUILD_NUMBER=${BUILD_NUMBER} \
+    GIT_COMMIT=${GIT_COMMIT} \
+    BUILD_TIMESTAMP=${BUILD_TIMESTAMP}
+
 # Patch OS-level packages (fixes the libcrypto3/libssl3 CVEs)
 RUN apk update && apk upgrade --no-cache
 

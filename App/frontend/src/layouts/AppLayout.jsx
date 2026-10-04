@@ -1,6 +1,7 @@
 import { Bell, Database, Gauge, GitBranch, LogOut, RadioTower, Shield, Wind } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useNavigation } from '../context/NavigationContext.jsx';
+import VersionBadge from '../components/VersionBadge.jsx';
 
 const links = [
   { to: '/', label: 'Dashboard', icon: Gauge },
@@ -65,6 +66,7 @@ export default function AppLayout({ page }) {
       <main className="grid-bg p-4 md:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl">{page}</div>
       </main>
+      <VersionBadge />
     </div>
   );
 }

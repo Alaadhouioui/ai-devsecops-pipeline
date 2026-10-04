@@ -11,6 +11,7 @@ import moduleRoutes from './routes/moduleRoutes.js';
 import logRoutes from './routes/logRoutes.js';
 import securityRoutes from './routes/securityRoutes.js';
 import devsecopsRoutes from './routes/devsecopsRoutes.js';
+import versionRoutes from './routes/versionRoutes.js';
 import { buildActivityEvent, buildDashboardSnapshot } from './services/simulationService.js';
 import { seedDemoData } from './services/seedService.js';
 
@@ -35,6 +36,7 @@ app.use(express.json({ limit: '1mb' }));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 }));
 
 app.get('/health', (req, res) => res.json({ status: 'healthy', service: 'aerosec-backend' }));
+app.use('/api/version', versionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/modules', moduleRoutes);
@@ -68,4 +70,3 @@ seedDemoData()
     console.error('Failed to seed demo data', error);
     process.exit(1);
   });
-
