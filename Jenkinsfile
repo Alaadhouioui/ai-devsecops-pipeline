@@ -65,7 +65,7 @@ pipeline {
                 stage('Backend Tests') {
                     steps {
                         dir('App/backend') {
-                            sh 'npm test'
+                            sh 'npm run test:coverage'
                         }
                     }
                 }
@@ -75,6 +75,20 @@ pipeline {
                         sh 'python3 -m unittest discover -s App/ai-engine'
                     }
                 }
+
+                stage('Frontend Tests') {
+                    steps {
+                        dir('App/frontend') {
+                            sh 'npm run test:coverage'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Prepare Sonar Coverage') {
+            steps {
+                sh 'node App/scripts/merge-coverage.mjs'
             }
         }
 
@@ -87,7 +101,9 @@ pipeline {
                         sh """
                             ${scannerHome}/bin/sonar-scanner \
                             -Dsonar.projectKey=aerosec-tower \
-                            -Dsonar.sources=App/backend/src,App/frontend/src \
+                            -Dsonar.projectBaseDir=App \
+                            -Dsonar.sources=backend/src,frontend/src \
+                            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
                             -Dsonar.host.url=${SONAR_HOST} \
                             -Dsonar.javascript.node.maxspace=2048 \
                             -Dsonar.exclusions=**/node_modules/**,**/dist/**,**/build/** \
