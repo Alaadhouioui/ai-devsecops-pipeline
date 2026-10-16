@@ -4,7 +4,7 @@ import os
 import urllib.error
 import urllib.request
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 
 logging.basicConfig(level=logging.INFO)
