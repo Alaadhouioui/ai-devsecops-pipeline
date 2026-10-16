@@ -193,7 +193,7 @@ pipeline {
         stage('Spin Up Test Stack') {
     steps {
         dir('App') {
-            sh 'IMAGE_TAG=${IMAGE_TAG} docker compose up -d --build'
+            sh 'IMAGE_TAG=${IMAGE_TAG} docker compose up -d --no-build'
         }
         // give the app a few seconds to be ready
         sh '''
