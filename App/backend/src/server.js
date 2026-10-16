@@ -7,6 +7,8 @@ import { seedDemoData } from './services/seedService.js';
 
 dotenv.config();
 
+const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
+
 const server = http.createServer(app);
 
 const io = new Server(server, {
