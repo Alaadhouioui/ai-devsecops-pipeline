@@ -20,7 +20,6 @@ pipeline {
     }
 
     stages {
-
         stage('Checkout') {
             steps {
                 cleanWs()
@@ -40,7 +39,6 @@ pipeline {
 
         stage('Install Dependencies (Parallel)') {
             parallel {
-
                 stage('Backend') {
                     steps {
                         dir('App/backend') {
@@ -61,7 +59,6 @@ pipeline {
 
         stage('Tests (Parallel)') {
             parallel {
-
                 stage('Backend Tests') {
                     steps {
                         dir('App/backend') {
@@ -127,15 +124,15 @@ pipeline {
             steps {
                 script {
                     def buildTimestamp = new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone('UTC'))
-                sh """
-                    docker build \
-                      --build-arg BUILD_NUMBER=${env.BUILD_NUMBER} \
-                      --build-arg GIT_COMMIT=${env.GIT_COMMIT} \
-                      --build-arg BUILD_TIMESTAMP=${buildTimestamp} \
-                      -t aerosec-backend:${IMAGE_TAG} App/backend
-                    docker build -t aerosec-frontend:${IMAGE_TAG} App/frontend
-                    docker build -t aerosec-ai-engine:${IMAGE_TAG} App/ai-engine
-                """
+                    sh """
+                        docker build \
+                          --build-arg BUILD_NUMBER=${env.BUILD_NUMBER} \
+                          --build-arg GIT_COMMIT=${env.GIT_COMMIT} \
+                          --build-arg BUILD_TIMESTAMP=${buildTimestamp} \
+                          -t aerosec-backend:${IMAGE_TAG} App/backend
+                        docker build -t aerosec-frontend:${IMAGE_TAG} App/frontend
+                        docker build -t aerosec-ai-engine:${IMAGE_TAG} App/ai-engine
+                    """
                 }
             }
         }
@@ -191,62 +188,59 @@ pipeline {
         }
 
         stage('Spin Up Test Stack') {
-    steps {
-        dir('App') {
-            sh 'IMAGE_TAG=${IMAGE_TAG} docker compose up -d --no-build'
-        }
-        // give the app a few seconds to be ready
-        sh '''
-            for i in $(seq 1 12); do
-                curl -sf http://localhost:5173 > /dev/null && break
-                echo "Waiting for frontend..."
-                sleep 5
-            done
-        '''
-    }
-}
-
-stage('OWASP ZAP Baseline Scan') {
-    steps {
-        sh 'chmod -R 777 ${WORKSPACE}'
-        script {
-            def zapExitCode = sh(
-                script: """
-                    docker run --rm \
-                      -v ${WORKSPACE}:/zap/wrk/:rw \
-                      --network host \
-                      zaproxy/zap-stable zap-baseline.py \
-                      -t http://localhost:5173 \
-                      -r zap-report.html \
-                      -J zap-report.json
-                """,
-                returnStatus: true
-            )
-
-            archiveArtifacts artifacts: 'zap-report.html, zap-report.json', allowEmptyArchive: true
-
-            if (zapExitCode == 1) {
-                error("ZAP found FAIL-level vulnerabilities — blocking pipeline")
-            } else if (zapExitCode == 2) {
-                unstable("ZAP found WARN-level issues — review recommended, not blocking")
+            steps {
+                dir('App') {
+                    sh 'IMAGE_TAG=${IMAGE_TAG} docker compose up -d --no-build'
+                }
+                // give the app a few seconds to be ready
+                sh '''
+                    for i in $(seq 1 12); do
+                        curl -sf http://localhost:5173 > /dev/null && break
+                        echo "Waiting for frontend..."
+                        sleep 5
+                    done
+                '''
             }
         }
-    }
-}
 
+        stage('OWASP ZAP Baseline Scan') {
+            steps {
+                sh 'chmod -R 777 ${WORKSPACE}'
+                script {
+                    def zapExitCode = sh(
+                    script: """
+                        docker run --rm \
+                          -v ${WORKSPACE}:/zap/wrk/:rw \
+                          --network host \
+                          zaproxy/zap-stable zap-baseline.py \
+                          -t http://localhost:5173 \
+                          -r zap-report.html \
+                          -J zap-report.json
+                    """,
+                    returnStatus: true
+                    )
 
-                
+                    archiveArtifacts artifacts: 'zap-report.html, zap-report.json', allowEmptyArchive: true
+
+                    if (zapExitCode == 1) {
+                        error("ZAP found FAIL-level vulnerabilities — blocking pipeline")
+                    } else if (zapExitCode == 2) {
+                        unstable("ZAP found WARN-level issues — review recommended, not blocking")
+                    }
+                }
+            }
+        }
+
         stage('AI Security Gate') {
             steps {
                 script {
-
                     def response = sh(
-                        script: """
-                            curl -s -X POST ${AI_ENGINE}/analyze \
-                            -H 'Content-Type: application/json' \
-                            -d '{"message":"pipeline security analysis","type":"devsecops"}'
-                        """,
-                        returnStdout: true
+                    script: """
+                        curl -s -X POST ${AI_ENGINE}/analyze \
+                        -H 'Content-Type: application/json' \
+                        -d '{"message":"pipeline security analysis","type":"devsecops"}'
+                    """,
+                    returnStdout: true
                     ).trim()
 
                     echo "AI RESPONSE: ${response}"
@@ -266,29 +260,29 @@ stage('OWASP ZAP Baseline Scan') {
                 }
             }
         }
-	stage('Tear Down Test Stack') {
-    steps {
-        dir('App') {
-            sh 'docker compose down || true'
+        stage('Tear Down Test Stack') {
+            steps {
+                dir('App') {
+                    sh 'docker compose down || true'
+                }
+            }
         }
-    }
-}
-	stage('Push to DockerHub') {
-    steps {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-            sh """
-                echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
-                docker tag aerosec-backend:${IMAGE_TAG} dhouiouialaaa/aerosec-tower:backend-${IMAGE_TAG}
-                docker tag aerosec-frontend:${IMAGE_TAG} dhouiouialaaa/aerosec-tower:frontend-${IMAGE_TAG}
-                docker tag aerosec-ai-engine:${IMAGE_TAG} dhouiouialaaa/aerosec-tower:ai-engine-${IMAGE_TAG}
-                docker push dhouiouialaaa/aerosec-tower:backend-${IMAGE_TAG}
-                docker push dhouiouialaaa/aerosec-tower:frontend-${IMAGE_TAG}
-                docker push dhouiouialaaa/aerosec-tower:ai-engine-${IMAGE_TAG}
-                docker logout
-            """
+        stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh """
+                        echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
+                        docker tag aerosec-backend:${IMAGE_TAG} dhouiouialaaa/aerosec-tower:backend-${IMAGE_TAG}
+                        docker tag aerosec-frontend:${IMAGE_TAG} dhouiouialaaa/aerosec-tower:frontend-${IMAGE_TAG}
+                        docker tag aerosec-ai-engine:${IMAGE_TAG} dhouiouialaaa/aerosec-tower:ai-engine-${IMAGE_TAG}
+                        docker push dhouiouialaaa/aerosec-tower:backend-${IMAGE_TAG}
+                        docker push dhouiouialaaa/aerosec-tower:frontend-${IMAGE_TAG}
+                        docker push dhouiouialaaa/aerosec-tower:ai-engine-${IMAGE_TAG}
+                        docker logout
+                    """
+                }
+            }
         }
-    }
-}
         stage('Push to Nexus Docker Registry') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus-creds', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
@@ -300,12 +294,11 @@ stage('OWASP ZAP Baseline Scan') {
                         docker push localhost:8082/aerosec-backend:${IMAGE_TAG}
                         docker push localhost:8082/aerosec-ai-engine:${IMAGE_TAG}
                         docker push localhost:8082/aerosec-frontend:${IMAGE_TAG}
-			docker logout localhost:8082
+                        docker logout localhost:8082
                     """
                 }
             }
         }
-	
 
         stage('Upload Reports to Nexus') {
             steps {
@@ -319,12 +312,12 @@ stage('OWASP ZAP Baseline Scan') {
         }
         stage('Deploy') {
             steps {
-		dir('App') {
+                dir('App') {
                     sh """
-                       IMAGE_TAG=${IMAGE_TAG} docker compose down || true
-                       IMAGE_TAG=${IMAGE_TAG} docker compose up -d 
+                        IMAGE_TAG=${IMAGE_TAG} docker compose down || true
+                        IMAGE_TAG=${IMAGE_TAG} docker compose up -d 
                     """
-		}
+                }
             }
         }
 
@@ -356,33 +349,32 @@ stage('OWASP ZAP Baseline Scan') {
                 """
             }
         }
-    
 
-	stage('Deploy to k3s') {
-    steps {
-        withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG_FILE')]) {
-            sh """
-                export KUBECONFIG=\$KUBECONFIG_FILE
+        stage('Deploy to k3s') {
+            steps {
+                withCredentials([file(credentialsId: 'k3s-kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+                    sh """
+                        export KUBECONFIG=\$KUBECONFIG_FILE
 
-                # Substitute the real image tag into each manifest
-                sed 's/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g' k8s/backend.yaml > /tmp/backend.yaml
-                sed 's/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g' k8s/frontend.yaml > /tmp/frontend.yaml
-                sed 's/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g' k8s/ai-engine.yaml > /tmp/ai-engine.yaml
+                        # Substitute the real image tag into each manifest
+                        sed 's/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g' k8s/backend.yaml > /tmp/backend.yaml
+                        sed 's/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g' k8s/frontend.yaml > /tmp/frontend.yaml
+                        sed 's/IMAGE_TAG_PLACEHOLDER/${IMAGE_TAG}/g' k8s/ai-engine.yaml > /tmp/ai-engine.yaml
 
-                kubectl apply -f k8s/postgres.yaml
-                kubectl apply -f /tmp/backend.yaml
-                kubectl apply -f /tmp/frontend.yaml
-                kubectl apply -f /tmp/ai-engine.yaml
+                        kubectl apply -f k8s/postgres.yaml
+                        kubectl apply -f /tmp/backend.yaml
+                        kubectl apply -f /tmp/frontend.yaml
+                        kubectl apply -f /tmp/ai-engine.yaml
 
-                kubectl rollout status deployment/aerosec-postgres --timeout=90s
-                kubectl rollout status deployment/aerosec-backend --timeout=90s
-                kubectl rollout status deployment/aerosec-frontend --timeout=90s
-                kubectl rollout status deployment/aerosec-ai-engine --timeout=90s
-            """
-       		 }
-   	 }
-	}	
-}
+                        kubectl rollout status deployment/aerosec-postgres --timeout=90s
+                        kubectl rollout status deployment/aerosec-backend --timeout=90s
+                        kubectl rollout status deployment/aerosec-frontend --timeout=90s
+                        kubectl rollout status deployment/aerosec-ai-engine --timeout=90s
+                    """
+                }
+            }
+        }
+    }
     post {
         success {
             echo "SUCCESS: Pipeline completed"

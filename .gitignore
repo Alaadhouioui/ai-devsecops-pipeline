@@ -1,6 +1,30 @@
+# Dependencies and build output
 node_modules/
 dist/
+build/
 __pycache__/
 *.py[cod]
-.env
 .venv/
+
+# Generated test coverage and scan reports
+coverage/
+zap-report.*
+ai-report.json
+trivy-report.*
+
+# Local secrets and credentials (never commit these)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+kubeconfig*
+*.kubeconfig
+
+# Editor / OS / backup files
+.DS_Store
+.idea/
+.vscode/
+*.log
+*.bak
+*.backup*
