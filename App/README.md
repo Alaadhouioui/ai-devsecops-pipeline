@@ -10,7 +10,7 @@ This is not a real ATC system. It is a safe graduation-project simulation for mo
 
 ## What The Platform Demonstrates
 
-- CI/CD automation with Jenkins stages for dependency installation, AI unit tests, SonarQube analysis, Docker image builds, Trivy image scanning, AI security gating, deployment, and health checks.
+- CI/CD automation with Jenkins stages for dependency installation, unit tests, SonarQube analysis and Quality Gate, Docker image builds, Trivy image scanning, OWASP ZAP baseline scanning, AI security gating, registry publishing, deployment, health checks, and K3s rollout.
 - Static code analysis with SonarQube configuration for backend and frontend source code.
 - Containerized services for the frontend, backend, PostgreSQL database, and AI engine.
 - AI-powered security scoring for login attempts, pipeline signals, degraded services, suspicious events, and critical exposure indicators.
@@ -21,12 +21,12 @@ This is not a real ATC system. It is a safe graduation-project simulation for mo
 
 - Frontend: React, Vite, TailwindCSS, Framer Motion, Axios, React Router, Recharts, Socket.io client
 - Backend: Node.js, Express, PostgreSQL, JWT, bcrypt, Socket.io
-- AI Engine: Python, FastAPI, Pydantic
+- AI Engine: Python, FastAPI, Pydantic, xAI Grok API with deterministic fallback
 - Database: PostgreSQL 16
 - Security: Helmet, CORS, rate limiting, validation middleware, role-based routes, Trivy image scanning
 - Infrastructure: Docker, Docker Compose, Nginx frontend proxy
 - CI/CD: Jenkins, SonarQube, Trivy, AI security gate
-- Pipeline context: GitHub Webhooks, Docker Build, k3s, AWS EC2, OWASP ZAP planning context
+- Pipeline context: GitHub Webhooks, Docker Build, OWASP ZAP, Nexus, Docker Hub, K3s, AWS EC2
 
 ## Demo Accounts
 
@@ -39,7 +39,7 @@ This is not a real ATC system. It is a safe graduation-project simulation for mo
 ## Run With Docker
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
 
 Frontend: http://localhost:5173  
@@ -76,7 +76,7 @@ Create `backend/.env` from your local values when running outside Docker. At min
 
 ## AI Risk Engine
 
-The AI engine exposes `POST /analyze` and returns a deterministic risk decision:
+The AI engine exposes `POST /analyze`. It asks an LLM (xAI Grok) for a risk assessment, enforces the thresholds below in code, and never scores below the deterministic rule baseline. If the LLM is unavailable it returns the rule-based score with `manual-review`. Example response:
 
 ```json
 {
@@ -102,21 +102,9 @@ Detected signals include authentication abuse, injection attempts, reconnaissanc
 
 ## DevSecOps Pipeline
 
-The Jenkinsfile currently performs:
+The full pipeline (tests, SonarQube Quality Gate, Trivy, OWASP ZAP, AI security gate, Docker Hub / Nexus publishing, Docker Compose and K3s deployment) is documented in the [root README](../README.md#pipeline-stages) and defined in the [Jenkinsfile](../Jenkinsfile).
 
-1. Project information output
-2. Backend dependency installation
-3. Frontend dependency installation
-4. Backend middleware/auth tests
-5. AI engine unit tests
-6. SonarQube analysis
-7. Docker image builds for backend, frontend, and AI engine
-8. Trivy image scanning that fails on HIGH or CRITICAL findings
-9. AI security gate using JSON-parsed risk response
-10. Docker Compose deployment
-11. Backend and AI engine health checks
-
-High AI risk marks the build unstable for manual review. Critical risk or a `block` recommendation fails the pipeline.
+High AI risk marks the build unstable for manual review. Critical risk fails the pipeline.
 
 ## Main Features
 
